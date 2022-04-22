@@ -5,6 +5,8 @@ plugins {
   java
   application
   id("com.github.johnrengelman.shadow") version "7.0.0"
+  id("io.spring.dependency-management") version "1.0.1.RELEASE"
+  id("io.freefair.lombok") version "6.4.3"
 }
 
 group = "com.cheetahdigital.senderspoc"
@@ -14,10 +16,12 @@ repositories {
   mavenCentral()
 }
 
+val junitJupiterVersion = "5.8.2"
+val jacksonVersion = "2.13.2.2"
+val slf4jApiVersion = "1.7.36"
 val vertxVersion = "4.2.7"
-val junitJupiterVersion = "5.7.0"
 
-val mainVerticleName = "com.cheetahdigital.senderspoc.senders_poc.MainVerticle"
+val mainVerticleName = "com.cheetahdigital.senderspoc.SendersVerticle"
 val launcherClassName = "io.vertx.core.Launcher"
 
 val watchForChange = "src/**/*"
@@ -27,9 +31,24 @@ application {
   mainClass.set(launcherClassName)
 }
 
+dependencyManagement {
+  imports {
+    mavenBom("org.apache.logging.log4j:log4j-bom:2.17.2")
+  }
+}
+
 dependencies {
-  implementation(platform("io.vertx:vertx-stack-depchain:$vertxVersion"))
+  implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+  implementation("io.vertx:vertx-config")
+  implementation("io.vertx:vertx-config-yaml")
   implementation("io.vertx:vertx-core")
+  implementation(platform("io.vertx:vertx-stack-depchain:$vertxVersion"))
+  implementation("io.vertx:vertx-web")
+  implementation("org.apache.logging.log4j:log4j-api")
+  implementation("org.apache.logging.log4j:log4j-core")
+  implementation("org.apache.logging.log4j:log4j-slf4j-impl")
+  implementation("org.slf4j:slf4j-api:$slf4jApiVersion")
+
   testImplementation("io.vertx:vertx-junit5")
   testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
 }
@@ -55,5 +74,11 @@ tasks.withType<Test> {
 }
 
 tasks.withType<JavaExec> {
-  args = listOf("run", mainVerticleName, "--redeploy=$watchForChange", "--launcher-class=$launcherClassName", "--on-redeploy=$doOnChange")
+  args = listOf(
+    "run",
+    mainVerticleName,
+    "--redeploy=$watchForChange",
+    "--launcher-class=$launcherClassName",
+    "--on-redeploy=$doOnChange"
+  )
 }
