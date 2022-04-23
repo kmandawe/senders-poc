@@ -16,6 +16,7 @@ repositories {
   mavenCentral()
 }
 
+val commonsCodecVersion = "1.15"
 val junitJupiterVersion = "5.8.2"
 val jacksonVersion = "2.13.2.2"
 val slf4jApiVersion = "1.7.36"
@@ -39,9 +40,11 @@ dependencyManagement {
 
 dependencies {
   implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+  implementation("commons-codec:commons-codec:$commonsCodecVersion")
   implementation("io.vertx:vertx-config")
   implementation("io.vertx:vertx-config-yaml")
   implementation("io.vertx:vertx-core")
+  implementation("io.vertx:vertx-redis-client")
   implementation(platform("io.vertx:vertx-stack-depchain:$vertxVersion"))
   implementation("io.vertx:vertx-web")
   implementation("org.apache.logging.log4j:log4j-api")
