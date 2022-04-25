@@ -4,6 +4,7 @@ import io.vertx.core.json.JsonObject;
 import lombok.Builder;
 import lombok.ToString;
 import lombok.Value;
+import lombok.val;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -14,7 +15,8 @@ import static com.cheetahdigital.senderspoc.common.config.ConfigLoader.*;
 @Value
 @ToString
 public class BrokerConfig {
-  ServerConfig serverConfig;
+  ServerConfig server;
+  RedisQueuesConfig redisQueues;
   String version;
 
   public static BrokerConfig from(final JsonObject config) {
@@ -22,12 +24,16 @@ public class BrokerConfig {
     if (Objects.isNull(version)) {
       throw new RuntimeException("version is not configured in config file!");
     }
-    return BrokerConfig.builder().serverConfig(parseServerConfig(config)).version(version).build();
+    return BrokerConfig.builder()
+        .server(parseServerConfig(config))
+        .version(version)
+        .redisQueues(parseRedisQueuesConfig(config))
+        .build();
   }
 
   private static ServerConfig parseServerConfig(final JsonObject config) {
     final Integer portProperties =
-        config.getJsonObject("server") != null
+        config.getJsonObject("server", config) != null
             ? config.getJsonObject(SERVER).getInteger(PORT)
             : null;
     final Integer serverPort =
@@ -36,5 +42,17 @@ public class BrokerConfig {
       throw new RuntimeException(SERVER_PORT + " not configured!");
     }
     return ServerConfig.builder().port(serverPort).build();
+  }
+
+  private static RedisQueuesConfig parseRedisQueuesConfig(final JsonObject config) {
+    val redisQueuesConfig = config.getJsonObject(REDISQUEUES_CONFIG);
+    var httpEnabled = false;
+    if (redisQueuesConfig != null) {
+      httpEnabled = redisQueuesConfig.getBoolean(REDISQUEUES_HTTP_ENABLED);
+    }
+    return RedisQueuesConfig.builder()
+        .httpRequestHandlerEnabled(httpEnabled)
+        .processorAddress(redisQueuesConfig.getString(REDISQUEUES_PROCESSOR_ADDRESS))
+        .build();
   }
 }

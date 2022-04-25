@@ -45,10 +45,10 @@ public class RedisQueuesConfiguration {
     private static final int DEFAULT_QUEUE_SPEED_INTERVAL_SEC = 60;
 
     public static final String PROP_ADDRESS = "address";
-    public static final String PROP_CONFIGURATION_UPDATED_ADDRESS = "configuration-updated-address";
-    public static final String PROP_REDIS_PREFIX = "redis-prefix";
-    public static final String PROP_PROCESSOR_ADDRESS = "processor-address";
-    public static final String PROP_REFRESH_PERIOD = "refresh-period";
+    public static final String PROP_CONFIGURATION_UPDATED_ADDRESS = "configurationUpdatedAddress";
+    public static final String PROP_REDIS_PREFIX = "redisPrefix";
+    public static final String PROP_PROCESSOR_ADDRESS = "processorAddress";
+    public static final String PROP_REFRESH_PERIOD = "refreshPeriod";
     public static final String PROP_REDIS_HOST = "redisHost";
     public static final String PROP_REDIS_PORT = "redisPort";
     public static final String PROP_REDIS_AUTH = "redisAuth";

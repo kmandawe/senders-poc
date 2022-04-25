@@ -170,7 +170,7 @@ public class RedisQueuesVerticle extends AbstractVerticle {
     log.info("Started with UID " + uid);
 
     RedisQueuesConfiguration modConfig = RedisQueuesConfiguration.fromJsonObject(config());
-    log.info("Starting Redisques module with configuration: " + modConfig);
+    log.info("Starting RedisQueues module with configuration: " + modConfig);
 
     address = modConfig.getAddress();
     configurationUpdatedAddress = modConfig.getConfigurationUpdatedAddress();

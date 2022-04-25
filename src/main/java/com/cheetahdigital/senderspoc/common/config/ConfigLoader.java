@@ -22,6 +22,11 @@ public class ConfigLoader {
   public static final String PORT = "port";
   static final List<String> EXPOSED_ENVIRONMENT_VARIABLES = Arrays.asList(SERVER_PORT);
 
+  /***** RedisQueues Configuration *****/
+  public static final String REDISQUEUES_CONFIG = "redisQueues";
+  public static final String REDISQUEUES_HTTP_ENABLED = "httpRequestHandlerEnabled";
+  public static final String REDISQUEUES_PROCESSOR_ADDRESS = "processorAddress";
+
   public static Future<BrokerConfig> load(Vertx vertx) {
 
     final var exposedKeys = new JsonArray();

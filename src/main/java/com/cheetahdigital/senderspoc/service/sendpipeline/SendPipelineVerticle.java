@@ -1,5 +1,6 @@
 package com.cheetahdigital.senderspoc.service.sendpipeline;
 
+import com.cheetahdigital.senderspoc.service.sendpipeline.processor.SendPipelineQueuesProcessor;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
@@ -10,23 +11,12 @@ import static com.cheetahdigital.senderspoc.service.redisqueues.util.RedisQueues
 
 @Slf4j
 public class SendPipelineVerticle extends AbstractVerticle {
+  public static final String SEGMENTATION_QUEUE = "segmentation_queue";
+
   @Override
   public void start(Promise<Void> startPromise) {
     log.info("Starting {}...", SendPipelineVerticle.class.getSimpleName());
-    vertx
-        .eventBus()
-        .<JsonObject>consumer(getProcessorAddress())
-        .handler(
-            message -> {
-              final String queue = message.body().getString("queue");
-              final String payload = message.body().getString("payload");
-              log.info("Processed message {} from QUEUE: {}", payload, queue);
-              message.reply(new JsonObject().put(STATUS, OK));
-            });
+    SendPipelineQueuesProcessor.registerQueuesConsumer(vertx);
     startPromise.complete();
-  }
-
-  private String getProcessorAddress() {
-    return "redis-queues-processor";
   }
 }

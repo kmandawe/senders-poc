@@ -1,3 +1,6 @@
 version: "1.0"
 server:
   port: 8888
+redisQueues:
+  httpRequestHandlerEnabled: true
+  processorAddress: 'redis-queues-processor'

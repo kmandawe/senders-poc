@@ -2,7 +2,6 @@ package com.cheetahdigital.senderspoc.api;
 
 import com.cheetahdigital.senderspoc.api.sendpipeline.SendPipelineRestApi;
 import com.cheetahdigital.senderspoc.common.config.BrokerConfig;
-import com.cheetahdigital.senderspoc.common.config.ConfigLoader;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -16,13 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 public class RestApiVerticle extends AbstractVerticle {
   @Override
   public void start(Promise<Void> startPromise) {
-    ConfigLoader.load(vertx)
-        .onFailure(startPromise::fail)
-        .onSuccess(
-            configuration -> {
-              log.info("Retrieved configuration {}", configuration);
-              startHttpServerAndAttachRoutes(startPromise, configuration);
-            });
+    startHttpServerAndAttachRoutes(startPromise, BrokerConfig.from(config()));
   }
 
   private void startHttpServerAndAttachRoutes(
@@ -33,7 +26,7 @@ public class RestApiVerticle extends AbstractVerticle {
 
     SendPipelineRestApi.attach(restApi);
 
-    var port = configuration.getServerConfig().getPort();
+    var port = configuration.getServer().getPort();
 
     vertx
         .createHttpServer()

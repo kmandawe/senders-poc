@@ -1,11 +1,16 @@
 package com.cheetahdigital.senderspoc;
 
 import com.cheetahdigital.senderspoc.api.RestApiVerticle;
+import com.cheetahdigital.senderspoc.common.config.ConfigLoader;
 import com.cheetahdigital.senderspoc.service.redisqueues.RedisQueuesVerticle;
 import com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle;
-import com.cheetahdigital.senderspoc.service.versioninfo.VersionInfoVerticle;
 import io.vertx.core.*;
+import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.atomic.AtomicReference;
+
+import static com.cheetahdigital.senderspoc.common.config.ConfigLoader.REDISQUEUES_CONFIG;
 
 @Slf4j
 public class SendersVerticle extends AbstractVerticle {
@@ -13,32 +18,55 @@ public class SendersVerticle extends AbstractVerticle {
   @Override
   public void start(Promise<Void> startPromise) {
     var startTimeMillis = System.currentTimeMillis();
-    deployVerticle(VersionInfoVerticle.class, startPromise, 1, false, startTimeMillis)
+    AtomicReference<JsonObject> brokerConfig = new AtomicReference<>();
+    ConfigLoader.load(vertx)
+        .onFailure(startPromise::fail)
+        .onSuccess(
+            configuration -> {
+              log.info("Retrieved configuration {}", configuration);
+              log.info("Current Application Version is: {}", configuration.getVersion());
+              brokerConfig.set(JsonObject.mapFrom(configuration));
+            })
         .compose(
             next ->
                 deployVerticle(
                     RedisQueuesVerticle.class,
+                    brokerConfig.get().getJsonObject(REDISQUEUES_CONFIG),
                     startPromise,
-                    processors() / 4,
+                    2,
                     false,
                     startTimeMillis))
         .compose(
             next ->
-                deployVerticle(SendPipelineVerticle.class, startPromise, 2, false, startTimeMillis))
+                deployVerticle(
+                    SendPipelineVerticle.class,
+                    brokerConfig.get(),
+                    startPromise,
+                    2,
+                    false,
+                    startTimeMillis))
         .compose(
             next ->
                 deployVerticle(
-                    RestApiVerticle.class, startPromise, processors() / 4, true, startTimeMillis));
+                    RestApiVerticle.class,
+                    brokerConfig.get(),
+                    startPromise,
+                    2,
+                    true,
+                    startTimeMillis));
   }
 
   private Future<String> deployVerticle(
       Class<? extends Verticle> verticleClass,
+      JsonObject config,
       Promise<Void> startPromise,
       int instances,
       boolean completeOnSuccess,
       long startTime) {
     return vertx
-        .deployVerticle(verticleClass.getName(), new DeploymentOptions().setInstances(instances))
+        .deployVerticle(
+            verticleClass.getName(),
+            new DeploymentOptions().setConfig(config).setInstances(instances))
         .onFailure(startPromise::fail)
         .onSuccess(
             id -> {
@@ -47,7 +75,7 @@ public class SendersVerticle extends AbstractVerticle {
                 long duration = System.currentTimeMillis() - startTime;
                 log.info("###################################################");
                 log.info("###### Senders Microservice started in {}ms ######", duration);
-                log.info("###################################################");;
+                log.info("###################################################");
                 startPromise.complete();
               }
             });
