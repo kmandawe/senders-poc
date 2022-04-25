@@ -4,6 +4,6 @@ import io.vertx.ext.web.Router;
 
 public class SendPipelineRestApi {
   public static void attach(Router parent) {
-    parent.get("/sendpipeline").handler(new GetSendPipelineHandler());
+    parent.get("/sendpipeline/:senderId").handler(new GetSendPipelineHandler());
   }
 }

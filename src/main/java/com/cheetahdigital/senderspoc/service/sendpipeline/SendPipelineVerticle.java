@@ -3,15 +3,12 @@ package com.cheetahdigital.senderspoc.service.sendpipeline;
 import com.cheetahdigital.senderspoc.service.sendpipeline.processor.SendPipelineQueuesProcessor;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
-
-import static com.cheetahdigital.senderspoc.service.redisqueues.util.RedisQueuesAPI.OK;
-import static com.cheetahdigital.senderspoc.service.redisqueues.util.RedisQueuesAPI.STATUS;
 
 @Slf4j
 public class SendPipelineVerticle extends AbstractVerticle {
-  public static final String SEGMENTATION_QUEUE = "segmentation_queue";
+  public static final String SP_EXECUTE_QUEUE = "sp-execute-queue";
+  public static final String EB_SEGMENTATION = "eb-segmentation";
 
   @Override
   public void start(Promise<Void> startPromise) {
