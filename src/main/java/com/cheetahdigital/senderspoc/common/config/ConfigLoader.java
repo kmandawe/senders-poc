@@ -7,19 +7,24 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
 
+@Slf4j
 public class ConfigLoader {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ConfigLoader.class);
-  public static final String CONFIG_FILE = "application.yml";
+  public static final String SEGMENTATION_THREADS = "SEGMENTATION_THREADS";
+  public static final Integer SEGMENTATION_THREADS_DEFAULT = 30;
   public static final String SERVER_PORT = "SERVER_PORT";
+  public static final String CONFIG_FILE = "application.yml";
+  public static final String INSTANCES = "instances";
   public static final String SERVER = "server";
   public static final String PORT = "port";
+
   static final List<String> EXPOSED_ENVIRONMENT_VARIABLES = Arrays.asList(SERVER_PORT);
 
   /***** RedisQueues Configuration *****/
@@ -28,11 +33,14 @@ public class ConfigLoader {
   public static final String REDISQUEUES_HTTP_ENABLED = "httpRequestHandlerEnabled";
   public static final String REDISQUEUES_PROCESSOR_ADDRESS = "processorAddress";
 
+  /***** Segmentation Configuration *****/
+  public static final String SEGMENTATION_CONFIG = "segmentation";
+
   public static Future<BrokerConfig> load(Vertx vertx) {
 
     final var exposedKeys = new JsonArray();
     EXPOSED_ENVIRONMENT_VARIABLES.forEach(exposedKeys::add);
-    LOG.debug("Fetch configuration for {}", exposedKeys.encode());
+    log.debug("Fetch configuration for {}", exposedKeys.encode());
 
     var envStore =
         new ConfigStoreOptions()

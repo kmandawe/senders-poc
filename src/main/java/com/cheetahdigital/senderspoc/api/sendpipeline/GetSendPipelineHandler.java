@@ -20,9 +20,10 @@ public class GetSendPipelineHandler implements Handler<RoutingContext> {
   @Override
   public void handle(RoutingContext context) {
 
-    final String senderId = context.pathParam("senderId");
-    log.debug("Executing Job for sender ID: {}", senderId);
-    JsonObject payload = new JsonObject().put("senderId", senderId);
+    val senderId = context.pathParam("senderId");
+    val batchSize = context.pathParam("batchSize");
+    log.info("Executing Job for sender ID: {} and batch size: {}", senderId, batchSize);
+    JsonObject payload = new JsonObject().put("senderId", senderId).put("batchSize", batchSize);
     eventBusSend(
         context,
         buildEnqueueOperation(SP_EXECUTE_QUEUE, payload),

@@ -5,6 +5,7 @@ import com.cheetahdigital.senderspoc.common.config.ConfigLoader;
 import com.cheetahdigital.senderspoc.service.redisqueues.RedisQueuesVerticle;
 import com.cheetahdigital.senderspoc.service.sendpipeline.SegmentationVerticle;
 import com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle;
+import com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle;
 import io.vertx.core.*;
 import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
@@ -48,15 +49,28 @@ public class SendersVerticle extends AbstractVerticle {
                     false,
                     startTimeMillis))
         .compose(
+            next -> {
+              val segmentationConfig = brokerConfig.get().getJsonObject("segmentation");
+              val instances = segmentationConfig.getInteger("instances");
+              return deployVerticle(
+                  SegmentationVerticle.class,
+                  startPromise,
+                  new DeploymentOptions()
+                      .setInstances(instances)
+                      .setConfig(brokerConfig.get())
+                      .setWorker(true)
+                      .setWorkerPoolSize(instances)
+                      .setWorkerPoolName("senders-segmentation-worker"),
+                  false,
+                  startTimeMillis);
+            })
+        .compose(
             next ->
                 deployVerticle(
-                    SegmentationVerticle.class,
+                    SenderStatsVerticle.class,
+                    brokerConfig.get(),
                     startPromise,
-                    new DeploymentOptions()
-                        .setInstances(2)
-                        .setConfig(brokerConfig.get())
-                        .setWorker(true)
-                        .setWorkerPoolName("senders-segmentation-worker"),
+                    1,
                     false,
                     startTimeMillis))
         .compose(

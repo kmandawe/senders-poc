@@ -5,3 +5,5 @@ redisQueues:
   address: 'redis-queues'
   httpRequestHandlerEnabled: true
   processorAddress: 'redis-queues-processor'
+segmentation:
+  instances: 250

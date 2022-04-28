@@ -18,6 +18,7 @@ public class BrokerConfig {
   ServerConfig server;
   RedisQueuesConfig redisQueues;
   String version;
+  SegmentationConfig segmentation;
 
   public static BrokerConfig from(final JsonObject config) {
     final String version = config.getString("version");
@@ -28,6 +29,7 @@ public class BrokerConfig {
         .server(parseServerConfig(config))
         .version(version)
         .redisQueues(parseRedisQueuesConfig(config))
+        .segmentation(parseSegmentationConfig(config))
         .build();
   }
 
@@ -55,5 +57,19 @@ public class BrokerConfig {
         .httpRequestHandlerEnabled(httpEnabled)
         .processorAddress(redisQueuesConfig.getString(REDISQUEUES_PROCESSOR_ADDRESS))
         .build();
+  }
+
+  private static SegmentationConfig parseSegmentationConfig(final JsonObject config) {
+    val instancesFromProperties =
+        config.getJsonObject(SEGMENTATION_CONFIG) != null
+            ? config.getJsonObject(SEGMENTATION_CONFIG).getInteger(INSTANCES)
+            : null;
+    var instances =
+        Optional.ofNullable(config.getInteger(SEGMENTATION_THREADS))
+            .orElse(instancesFromProperties);
+    if (instances == null) {
+      instances = SEGMENTATION_THREADS_DEFAULT;
+    }
+    return SegmentationConfig.builder().instances(instances).build();
   }
 }
