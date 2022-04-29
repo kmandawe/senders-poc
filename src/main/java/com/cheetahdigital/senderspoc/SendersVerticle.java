@@ -14,6 +14,7 @@ import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.cheetahdigital.senderspoc.common.config.ConfigLoader.*;
@@ -59,6 +60,8 @@ public class SendersVerticle extends AbstractVerticle {
                   SegmentationVerticle.class,
                   startPromise,
                   new DeploymentOptions()
+                      .setMaxWorkerExecuteTime(1000)
+                      .setMaxWorkerExecuteTimeUnit(TimeUnit.SECONDS)
                       .setInstances(instances)
                       .setConfig(brokerConfig.get())
                       .setWorker(true)
