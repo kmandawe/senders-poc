@@ -29,7 +29,6 @@ public class SenderStatsVerticle extends AbstractVerticle {
   private AtomicLong maxSegmentationTime;
   private long lastResetTime;
   private long lastUpdate;
-  private long lastResetToLastUpdate;
   private LocalDateTime lastUpdateTime;
 
   @Override
@@ -40,7 +39,6 @@ public class SenderStatsVerticle extends AbstractVerticle {
     timedOutSegmentations = new AtomicLong();
     lastResetTime = System.currentTimeMillis();
     lastUpdate = lastResetTime;
-    lastResetToLastUpdate = 0;
     lastUpdateTime = LocalDateTime.now();
     super.init(vertx, context);
   }
@@ -92,15 +90,13 @@ public class SenderStatsVerticle extends AbstractVerticle {
   }
 
   private synchronized JsonObject getStats() {
-    val currentStats =
-        new JsonObject()
-            .put("completed_segments", completedSegmentations.get())
-            .put("timedout_segments", timedOutSegmentations.get())
-            .put("failed_segments", failedSegmentations.get())
-            .put("max_segmentation_time", maxSegmentationTime.get())
-            .put("last_reset_to_last_update", lastUpdate - lastResetTime)
-            .put("last_update_time", lastUpdateTime.toString());
-    return currentStats;
+    return new JsonObject()
+        .put("completed_segments", completedSegmentations.get())
+        .put("timedout_segments", timedOutSegmentations.get())
+        .put("failed_segments", failedSegmentations.get())
+        .put("max_segmentation_time", maxSegmentationTime.get())
+        .put("last_reset_to_last_update", lastUpdate - lastResetTime)
+        .put("last_update_time", lastUpdateTime.toString());
   }
 
   private synchronized void resetStats() {

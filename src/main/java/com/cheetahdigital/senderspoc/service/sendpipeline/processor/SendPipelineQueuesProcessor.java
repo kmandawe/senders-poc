@@ -13,8 +13,7 @@ import lombok.val;
 import java.time.LocalDateTime;
 
 import static com.cheetahdigital.senderspoc.service.redisqueues.util.RedisQueuesAPI.*;
-import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.EB_SEGMENTATION;
-import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.SP_EXECUTE_QUEUE;
+import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.*;
 import static com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle.*;
 
 @Slf4j
@@ -34,10 +33,58 @@ public class SendPipelineQueuesProcessor {
                 case SP_EXECUTE_QUEUE:
                   processSegmentation(vertx, message, queue, payload);
                   break;
+                case SP_RESOLVE_ATTRIBUTES:
+                  processResolveAttributes(vertx, message, queue, payload);
+                  break;
                 default:
                   unsupportedOperation(queue, message);
               }
             });
+  }
+
+  private static void processResolveAttributes(
+      Vertx vertx, Message<JsonObject> message, String queue, String payload) {
+    val jsonPayload = new JsonObject(payload);
+    val senderId = jsonPayload.getString("senderId");
+    long startTime = System.currentTimeMillis();
+    jsonPayload.put("startTime", startTime);
+    eventBusSend(
+        vertx,
+        EB_RESOLVE_ATTRIBUTES,
+        jsonPayload,
+        resp -> {
+          if (resp.failed()) {
+            val type = resp.cause().getClass();
+            if (resp.cause() instanceof ReplyException) {
+              ReplyException replyException = (ReplyException) resp.cause();
+              log.warn(
+                  "Reply exception in processing resolve attributes job id {} got code: {} and type {}, with message {}",
+                  senderId,
+                  replyException.failureCode(),
+                  replyException.failureType(),
+                  replyException.getMessage());
+
+            } else {
+              log.error(
+                  "Error in processing job id {} got error: {} with message {}",
+                  senderId,
+                  type,
+                  resp.cause());
+            }
+          } else {
+            JsonObject responseBody = resp.result().body();
+            String status = responseBody.getString(STATUS);
+            long elapsed = System.currentTimeMillis() - startTime;
+            log.info(
+                "EVENT-BUS:{} acknowledge processing job Id {} with status: {} for {}ms",
+                EB_RESOLVE_ATTRIBUTES,
+                senderId,
+                status,
+                elapsed);
+          }
+        });
+    log.info("Processed message {} from QUEUE: {}", payload, queue);
+    message.reply(new JsonObject().put(STATUS, OK));
   }
 
   private static void processSegmentation(
@@ -103,7 +150,11 @@ public class SendPipelineQueuesProcessor {
             String status = responseBody.getString(STATUS);
             long elapsed = System.currentTimeMillis() - startTime;
             log.info(
-                "Done processing job Id {} with status: {} for {}ms", senderId, status, elapsed);
+                "EVENT-BUS: {} acknowledged segmentation job Id {} with status: {} for {}ms",
+                EB_SEGMENTATION,
+                senderId,
+                status,
+                elapsed);
             JsonObject successStatsPayload =
                 new JsonObject()
                     .put("operation", SEGMENT_COMPLETE)
@@ -120,7 +171,7 @@ public class SendPipelineQueuesProcessor {
                 });
           }
         });
-    log.info("Processed message {} from QUEUE: {}", payload, queue);
+    log.debug("Processed message {} from QUEUE: {}", payload, queue);
     message.reply(new JsonObject().put(STATUS, OK));
   }
 

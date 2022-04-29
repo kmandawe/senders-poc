@@ -2,8 +2,9 @@ package com.cheetahdigital.senderspoc;
 
 import com.cheetahdigital.senderspoc.api.RestApiVerticle;
 import com.cheetahdigital.senderspoc.common.config.ConfigLoader;
+import com.cheetahdigital.senderspoc.service.attrcalculation.AttributesCalculationVerticle;
 import com.cheetahdigital.senderspoc.service.redisqueues.RedisQueuesVerticle;
-import com.cheetahdigital.senderspoc.service.sendpipeline.SegmentationVerticle;
+import com.cheetahdigital.senderspoc.service.segmentation.SegmentationVerticle;
 import com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle;
 import com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle;
 import io.vertx.core.*;
@@ -71,6 +72,21 @@ public class SendersVerticle extends AbstractVerticle {
                     brokerConfig.get(),
                     startPromise,
                     1,
+                    false,
+                    startTimeMillis))
+        .compose(
+            next ->
+                deployVerticle(
+                    AttributesCalculationVerticle.class,
+                    startPromise,
+                    new DeploymentOptions()
+                        // TODO: dynamic
+                        .setInstances(4)
+                        .setConfig(brokerConfig.get())
+                        .setWorker(true)
+                        // TODO: dynamic
+                        .setWorkerPoolSize(4)
+                        .setWorkerPoolName("attributes-calculation-worker"),
                     false,
                     startTimeMillis))
         .compose(
