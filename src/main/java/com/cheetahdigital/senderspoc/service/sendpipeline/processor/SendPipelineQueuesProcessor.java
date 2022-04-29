@@ -31,6 +31,7 @@ public class SendPipelineQueuesProcessor {
 
               switch (queue) {
                 case SP_EXECUTE_QUEUE:
+                  sendStartJobToStats(vertx, payload);
                   processSegmentation(vertx, message, queue, payload);
                   break;
                 case SP_RESOLVE_ATTRIBUTES:
@@ -40,6 +41,23 @@ public class SendPipelineQueuesProcessor {
                   unsupportedOperation(queue, message);
               }
             });
+  }
+
+  private static void sendStartJobToStats(Vertx vertx, String payload) {
+    val jsonPayload = new JsonObject(payload);
+    val senderId = jsonPayload.getString("senderId");
+    JsonObject startJobPayload =
+        new JsonObject()
+            .put("operation", JOB_START)
+            .put("payload", new JsonObject().put("senderId", senderId));
+    eventBusSend(
+        vertx,
+        EB_STATS,
+        startJobPayload,
+        statsMessage -> {
+          JsonObject responseBody = statsMessage.result().body();
+          log.debug("Acknowledged job start stats with status: {}", responseBody.getString(STATUS));
+        });
   }
 
   private static void processResolveAttributes(
@@ -71,20 +89,23 @@ public class SendPipelineQueuesProcessor {
                   type,
                   resp.cause());
             }
+            log.info("Processed Redis message {} from QUEUE: {}", payload, queue);
+            // Tag as OK to not reprocess
+            message.reply(new JsonObject().put(STATUS, OK));
           } else {
             JsonObject responseBody = resp.result().body();
             String status = responseBody.getString(STATUS);
             long elapsed = System.currentTimeMillis() - startTime;
             log.info(
-                "EVENT-BUS:{} acknowledge processing job Id {} with status: {} for {}ms",
+                "EVENT-BUS:{} Done processing resolve attributes job Id {} with status: {} for {}ms",
                 EB_RESOLVE_ATTRIBUTES,
                 senderId,
                 status,
                 elapsed);
+            log.info("Processed Redis message {} from QUEUE: {}", payload, queue);
+            message.reply(new JsonObject().put(STATUS, OK));
           }
         });
-    log.info("Processed message {} from QUEUE: {}", payload, queue);
-    message.reply(new JsonObject().put(STATUS, OK));
   }
 
   private static void processSegmentation(
@@ -111,7 +132,7 @@ public class SendPipelineQueuesProcessor {
                   replyException.getMessage());
               JsonObject timedOutStatsPayload =
                   new JsonObject()
-                      .put("operation", SEGMENT_TIMEDOUT)
+                      .put("operation", SEND_TIMEDOUT)
                       .put("payload", new JsonObject().put("count", 1));
               eventBusSend(
                   vertx,
@@ -132,7 +153,7 @@ public class SendPipelineQueuesProcessor {
                   resp.cause());
               JsonObject failedStatsPayload =
                   new JsonObject()
-                      .put("operation", SEGMENT_FAILED)
+                      .put("operation", SEND_FAILED)
                       .put("payload", new JsonObject().put("count", 1));
               eventBusSend(
                   vertx,
@@ -150,14 +171,14 @@ public class SendPipelineQueuesProcessor {
             String status = responseBody.getString(STATUS);
             long elapsed = System.currentTimeMillis() - startTime;
             log.info(
-                "EVENT-BUS: {} acknowledged segmentation job Id {} with status: {} for {}ms",
+                "EVENT-BUS: {} Completed sender job Id {} with status: {} for {}ms",
                 EB_SEGMENTATION,
                 senderId,
                 status,
                 elapsed);
             JsonObject successStatsPayload =
                 new JsonObject()
-                    .put("operation", SEGMENT_COMPLETE)
+                    .put("operation", SEND_COMPLETE)
                     .put("payload", new JsonObject().put("count", 1).put("duration", elapsed));
             eventBusSend(
                 vertx,

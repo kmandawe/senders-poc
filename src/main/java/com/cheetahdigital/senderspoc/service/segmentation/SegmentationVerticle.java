@@ -1,10 +1,7 @@
 package com.cheetahdigital.senderspoc.service.segmentation;
 
 import com.cheetahdigital.senderspoc.common.config.BrokerConfig;
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
+import io.vertx.core.*;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +13,8 @@ import java.util.List;
 import static com.cheetahdigital.senderspoc.service.redisqueues.util.RedisQueuesAPI.*;
 import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.EB_SEGMENTATION;
 import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.SP_RESOLVE_ATTRIBUTES;
+import static com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle.EB_STATS;
+import static com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle.JOB_BATCH_UPDATE;
 
 @Slf4j
 public class SegmentationVerticle extends AbstractVerticle {
@@ -53,21 +52,49 @@ public class SegmentationVerticle extends AbstractVerticle {
     }
     if (segmentSize == 0) {
       log.warn("SEGMENTATION: Completed segmentation, segmentation has no result");
+      message.reply(new JsonObject().put(STATUS, OK));
+      sendBatchToProcessToStats(senderId, 0);
     } else {
       int batches = getBatches(segmentSize, batchSize);
+      sendBatchToProcessToStats(senderId, batches);
+      List<Future> batchFutures = new ArrayList<>();
       for (int i = 0; i < batches; i++) {
         // populate memberIds and queue job for one batch
-        populateBatchMembersAndQueueJob(senderId, segmentSize, batchSize, i);
+        batchFutures.add(populateBatchMembersAndQueueJob(senderId, segmentSize, batchSize, i));
       }
-      log.info(
-          "SEGMENTATION: Completed segmentation for senderID {}, now processing in {} batches",
-          senderId,
-          batches);
+      CompositeFuture.all(batchFutures)
+          .onSuccess(
+              futures -> {
+                log.info(
+                    "SEGMENTATION: Completed segmentation for senderID {}, now processing in {} batches",
+                    senderId,
+                    batches);
+                message.reply(new JsonObject().put(STATUS, OK));
+              });
     }
-    message.reply(new JsonObject().put(STATUS, OK));
   }
 
-  private void populateBatchMembersAndQueueJob(
+  private void sendBatchToProcessToStats(String senderId, long batchToProcess) {
+    JsonObject batchToProcessPayload =
+        new JsonObject()
+            .put("operation", JOB_BATCH_UPDATE)
+            .put(
+                "payload",
+                new JsonObject().put("senderId", senderId).put("batchToProcess", batchToProcess));
+    vertx
+        .eventBus()
+        .<JsonObject>request(
+            EB_STATS,
+            batchToProcessPayload,
+            statsMessage -> {
+              JsonObject responseBody = statsMessage.result().body();
+              log.debug(
+                  "Acknowledged BatchToProcess stats with status: {}",
+                  responseBody.getString(STATUS));
+            });
+  }
+
+  private Future<Void> populateBatchMembersAndQueueJob(
       String senderId, int segmentSize, int batchSize, int i) {
     List<String> memberIds = new ArrayList<>();
     for (int j = 1; j <= batchSize; j++) {
@@ -79,25 +106,30 @@ public class SegmentationVerticle extends AbstractVerticle {
       memberIds.add(memberId);
     }
     int batchInProcess = i + 1;
-    queueJobForBatch(senderId, memberIds, batchInProcess);
+    return queueJobForBatch(senderId, memberIds, batchInProcess);
   }
 
-  private void queueJobForBatch(String senderId, List<String> memberIds, int batchInProcess) {
-    JsonObject payload =
-        new JsonObject()
-            .put("senderId", senderId)
-            .put("memberIds", memberIds)
-            .put("batch", batchInProcess);
-    redisQueuesSend(
-        buildEnqueueOperation(SP_RESOLVE_ATTRIBUTES, payload),
-        resolveAttributeMessage -> {
-          JsonObject responseBody = resolveAttributeMessage.result().body();
-          String status = responseBody.getString(STATUS);
-          log.info(
-              "Resolve attributes enqueue status: {}, senderID {}, batch {}",
-              status,
-              senderId,
-              batchInProcess);
+  private Future<Void> queueJobForBatch(
+      String senderId, List<String> memberIds, int batchInProcess) {
+    return Future.future(
+        promise -> {
+          JsonObject payload =
+              new JsonObject()
+                  .put("senderId", senderId)
+                  .put("memberIds", memberIds)
+                  .put("batch", batchInProcess);
+          redisQueuesSend(
+              buildEnqueueOperation(SP_RESOLVE_ATTRIBUTES, payload),
+              resolveAttributeMessage -> {
+                JsonObject responseBody = resolveAttributeMessage.result().body();
+                String status = responseBody.getString(STATUS);
+                log.info(
+                    "Resolve attributes enqueue status: {}, senderID {}, batch {}",
+                    status,
+                    senderId,
+                    batchInProcess);
+                promise.complete();
+              });
         });
   }
 

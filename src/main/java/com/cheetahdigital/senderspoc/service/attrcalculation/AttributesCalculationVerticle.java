@@ -12,6 +12,8 @@ import java.util.Map;
 
 import static com.cheetahdigital.senderspoc.service.redisqueues.util.RedisQueuesAPI.*;
 import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.*;
+import static com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle.EB_STATS;
+import static com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle.JOB_BATCH_UPDATE;
 
 @Slf4j
 public class AttributesCalculationVerticle extends AbstractVerticle {
@@ -59,11 +61,35 @@ public class AttributesCalculationVerticle extends AbstractVerticle {
                 message.reply(new JsonObject().put(STATUS, ERROR));
               }
               sendToSmf(smfPaylod);
+              sendBatchCompletedToStats(senderId, 1, memberSize);
               log.info(
                   "ATTRIBUTES-CALCULATION: Completed attributes calculation for senderID {}, batch: {}",
                   senderId,
                   batch);
               message.reply(new JsonObject().put(STATUS, OK));
+            });
+  }
+
+  private void sendBatchCompletedToStats(String senderId, long batchCompleted, long memberSize) {
+    JsonObject batchToProcessPayload =
+        new JsonObject()
+            .put("operation", JOB_BATCH_UPDATE)
+            .put(
+                "payload",
+                new JsonObject()
+                    .put("senderId", senderId)
+                    .put("batchCompleted", batchCompleted)
+                    .put("memberSize", memberSize));
+    vertx
+        .eventBus()
+        .<JsonObject>request(
+            EB_STATS,
+            batchToProcessPayload,
+            statsMessage -> {
+              JsonObject responseBody = statsMessage.result().body();
+              log.debug(
+                  "Acknowledged BatchCompleted stats with status: {}",
+                  responseBody.getString(STATUS));
             });
   }
 
