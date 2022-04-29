@@ -30,6 +30,8 @@ public class ConfigLoader {
   /***** RedisQueues Configuration *****/
   public static final String REDISQUEUES_CONFIG = "redisQueues";
   public static final String REDISQUEUES_ADDRESS = "address";
+  public static final String REDISQUEUES_REDISHOST = "redisHost";
+  public static final String REDISQUEUES_REDISPORT = "redisPort";
   public static final String REDISQUEUES_HTTP_ENABLED = "httpRequestHandlerEnabled";
   public static final String REDISQUEUES_PROCESSOR_ADDRESS = "processorAddress";
 
