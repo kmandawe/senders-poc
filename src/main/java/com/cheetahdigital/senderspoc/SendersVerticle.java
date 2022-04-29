@@ -16,7 +16,7 @@ import lombok.val;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.cheetahdigital.senderspoc.common.config.ConfigLoader.REDISQUEUES_CONFIG;
+import static com.cheetahdigital.senderspoc.common.config.ConfigLoader.*;
 
 @Slf4j
 public class SendersVerticle extends AbstractVerticle {
@@ -39,7 +39,7 @@ public class SendersVerticle extends AbstractVerticle {
                     RedisQueuesVerticle.class,
                     brokerConfig.get().getJsonObject(REDISQUEUES_CONFIG),
                     startPromise,
-                    2,
+                    Math.max(processors() / 4, 2),
                     false,
                     startTimeMillis))
         .compose(
@@ -48,7 +48,7 @@ public class SendersVerticle extends AbstractVerticle {
                     SendPipelineVerticle.class,
                     brokerConfig.get(),
                     startPromise,
-                    2,
+                    Math.max(processors() / 4, 2),
                     false,
                     startTimeMillis))
         .compose(
@@ -77,57 +77,61 @@ public class SendersVerticle extends AbstractVerticle {
                     false,
                     startTimeMillis))
         .compose(
-            next ->
-                deployVerticle(
-                    AttributesCalculationVerticle.class,
-                    startPromise,
-                    new DeploymentOptions()
-                        // TODO: dynamic
-                        .setInstances(4)
-                        .setConfig(brokerConfig.get())
-                        .setWorker(true)
-                        // TODO: dynamic
-                        .setWorkerPoolSize(4)
-                        .setWorkerPoolName("attributes-calculation-worker"),
-                    false,
-                    startTimeMillis))
+            next -> {
+              val attributesCalculationConfig =
+                  brokerConfig.get().getJsonObject(ATTRIBUTES_CALCULATION_CONFIG);
+              val instances = attributesCalculationConfig.getInteger(INSTANCES);
+              return deployVerticle(
+                  AttributesCalculationVerticle.class,
+                  startPromise,
+                  new DeploymentOptions()
+                      .setInstances(instances)
+                      .setConfig(brokerConfig.get())
+                      .setWorker(true)
+                      .setWorkerPoolSize(instances)
+                      .setWorkerPoolName("attributes-calculation-worker"),
+                  false,
+                  startTimeMillis);
+            })
         .compose(
-            next ->
-                deployVerticle(
-                    MemberFunctionsVerticle.class,
-                    startPromise,
-                    new DeploymentOptions()
-                        // TODO: dynamic
-                        .setInstances(4)
-                        .setConfig(brokerConfig.get())
-                        .setWorker(true)
-                        // TODO: dynamic
-                        .setWorkerPoolSize(4)
-                        .setWorkerPoolName("member-functions-worker"),
-                    false,
-                    startTimeMillis))
+            next -> {
+              val memberFunctionsConfig = brokerConfig.get().getJsonObject(MEMBER_FUNCTIONS_CONFIG);
+              val instances = memberFunctionsConfig.getInteger(INSTANCES);
+              return deployVerticle(
+                  MemberFunctionsVerticle.class,
+                  startPromise,
+                  new DeploymentOptions()
+                      .setInstances(instances)
+                      .setConfig(brokerConfig.get())
+                      .setWorker(true)
+                      .setWorkerPoolSize(instances)
+                      .setWorkerPoolName("member-functions-worker"),
+                  false,
+                  startTimeMillis);
+            })
         .compose(
-            next ->
-                deployVerticle(
-                    MembersSummaryVerticle.class,
-                    startPromise,
-                    new DeploymentOptions()
-                        // TODO: dynamic
-                        .setInstances(4)
-                        .setConfig(brokerConfig.get())
-                        .setWorker(true)
-                        // TODO: dynamic
-                        .setWorkerPoolSize(4)
-                        .setWorkerPoolName("members-summary-worker"),
-                    false,
-                    startTimeMillis))
+            next -> {
+              val membersSummaryConfig = brokerConfig.get().getJsonObject(MEMBERS_SUMMARY_CONFIG);
+              val instances = membersSummaryConfig.getInteger(INSTANCES);
+              return deployVerticle(
+                  MembersSummaryVerticle.class,
+                  startPromise,
+                  new DeploymentOptions()
+                      .setInstances(instances)
+                      .setConfig(brokerConfig.get())
+                      .setWorker(true)
+                      .setWorkerPoolSize(instances)
+                      .setWorkerPoolName("members-summary-worker"),
+                  false,
+                  startTimeMillis);
+            })
         .compose(
             next ->
                 deployVerticle(
                     RestApiVerticle.class,
                     brokerConfig.get(),
                     startPromise,
-                    2,
+                    Math.max(processors() / 4, 2),
                     true,
                     startTimeMillis));
   }

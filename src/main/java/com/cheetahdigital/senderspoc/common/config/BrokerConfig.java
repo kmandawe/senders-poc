@@ -19,6 +19,9 @@ public class BrokerConfig {
   RedisQueuesConfig redisQueues;
   String version;
   SegmentationConfig segmentation;
+  AttributesCalculationConfig attributesCalculation;
+  MemberFunctionsConfig memberFunctions;
+  MembersSummaryConfig membersSummary;
 
   public static BrokerConfig from(final JsonObject config) {
     final String version = config.getString("version");
@@ -30,6 +33,9 @@ public class BrokerConfig {
         .version(version)
         .redisQueues(parseRedisQueuesConfig(config))
         .segmentation(parseSegmentationConfig(config))
+        .attributesCalculation(parseAttributesCalculationConfig(config))
+        .memberFunctions(parseMemberFunctionsConfig(config))
+        .membersSummary(parseMembersSummaryConfig(config))
         .build();
   }
 
@@ -73,5 +79,48 @@ public class BrokerConfig {
       instances = SEGMENTATION_THREADS_DEFAULT;
     }
     return SegmentationConfig.builder().instances(instances).build();
+  }
+
+  private static AttributesCalculationConfig parseAttributesCalculationConfig(
+      final JsonObject config) {
+    val instancesFromProperties =
+        config.getJsonObject(ATTRIBUTES_CALCULATION_CONFIG) != null
+            ? config.getJsonObject(ATTRIBUTES_CALCULATION_CONFIG).getInteger(INSTANCES)
+            : null;
+    var instances =
+        Optional.ofNullable(config.getInteger(ATTRIBUTES_CALCULATION_THREADS))
+            .orElse(instancesFromProperties);
+    if (instances == null) {
+      instances = ATTRIBUTES_CALCULATION_THREADS_DEFAULT;
+    }
+    return AttributesCalculationConfig.builder().instances(instances).build();
+  }
+
+  private static MemberFunctionsConfig parseMemberFunctionsConfig(final JsonObject config) {
+    val instancesFromProperties =
+        config.getJsonObject(MEMBER_FUNCTIONS_CONFIG) != null
+            ? config.getJsonObject(MEMBER_FUNCTIONS_CONFIG).getInteger(INSTANCES)
+            : null;
+    var instances =
+        Optional.ofNullable(config.getInteger(MEMBER_FUNCTIONS_THREADS))
+            .orElse(instancesFromProperties);
+    if (instances == null) {
+      instances = MEMBER_FUNCTIONS_THREADS_DEFAULT;
+    }
+    return MemberFunctionsConfig.builder().instances(instances).build();
+  }
+
+  private static MembersSummaryConfig parseMembersSummaryConfig(final JsonObject config) {
+    val instancesFromProperties =
+        config.getJsonObject(MEMBERS_SUMMARY_CONFIG) != null
+            ? config.getJsonObject(MEMBERS_SUMMARY_CONFIG).getInteger(INSTANCES)
+            : null;
+    var instances =
+        Optional.ofNullable(config.getInteger(MEMBERS_SUMMARY_THREADS))
+            .orElse(instancesFromProperties);
+    if (instances == null) {
+      instances = MEMBERS_SUMMARY_THREADS_DEFAULT;
+    }
+    return MembersSummaryConfig.builder().instances(instances).build();
   }
 }

@@ -8,4 +8,10 @@ redisQueues:
   httpRequestHandlerEnabled: true
   processorAddress: 'redis-queues-processor'
 segmentation:
-  instances: 250
+  instances: 200
+attributesCalculation:
+  instances: 10
+memberFunctions:
+  instances: 20
+membersSummary:
+  instances: 20

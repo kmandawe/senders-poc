@@ -8,8 +8,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
@@ -19,6 +17,12 @@ public class ConfigLoader {
 
   public static final String SEGMENTATION_THREADS = "SEGMENTATION_THREADS";
   public static final Integer SEGMENTATION_THREADS_DEFAULT = 30;
+  public static final String ATTRIBUTES_CALCULATION_THREADS = "ATTRIBUTES_CALCULATION_THREADS";
+  public static final Integer ATTRIBUTES_CALCULATION_THREADS_DEFAULT = 10;
+  public static final String MEMBER_FUNCTIONS_THREADS = "MEMBER_FUNCTIONS_THREADS";
+  public static final Integer MEMBER_FUNCTIONS_THREADS_DEFAULT = 20;
+  public static final String MEMBERS_SUMMARY_THREADS = "MEMBERS_SUMMARY_THREADS";
+  public static final Integer MEMBERS_SUMMARY_THREADS_DEFAULT = 20;
   public static final String SERVER_PORT = "SERVER_PORT";
   public static final String CONFIG_FILE = "application.yml";
   public static final String INSTANCES = "instances";
@@ -29,6 +33,7 @@ public class ConfigLoader {
 
   /***** RedisQueues Configuration *****/
   public static final String REDISQUEUES_CONFIG = "redisQueues";
+
   public static final String REDISQUEUES_ADDRESS = "address";
   public static final String REDISQUEUES_REDISHOST = "redisHost";
   public static final String REDISQUEUES_REDISPORT = "redisPort";
@@ -37,6 +42,15 @@ public class ConfigLoader {
 
   /***** Segmentation Configuration *****/
   public static final String SEGMENTATION_CONFIG = "segmentation";
+
+  /***** Attributes Calculation Configuration *****/
+  public static final String ATTRIBUTES_CALCULATION_CONFIG = "attributesCalculation";
+
+  /***** Member Functions Configuration *****/
+  public static final String MEMBER_FUNCTIONS_CONFIG = "memberFunctions";
+
+  /***** Members Summary Configuration *****/
+  public static final String MEMBERS_SUMMARY_CONFIG = "membersSummary";
 
   public static Future<BrokerConfig> load(Vertx vertx) {
 
