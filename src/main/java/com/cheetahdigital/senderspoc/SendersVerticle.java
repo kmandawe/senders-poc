@@ -3,6 +3,8 @@ package com.cheetahdigital.senderspoc;
 import com.cheetahdigital.senderspoc.api.RestApiVerticle;
 import com.cheetahdigital.senderspoc.common.config.ConfigLoader;
 import com.cheetahdigital.senderspoc.service.attrcalculation.AttributesCalculationVerticle;
+import com.cheetahdigital.senderspoc.service.memberfunctions.MemberFunctionsVerticle;
+import com.cheetahdigital.senderspoc.service.membersummary.MembersSummaryVerticle;
 import com.cheetahdigital.senderspoc.service.redisqueues.RedisQueuesVerticle;
 import com.cheetahdigital.senderspoc.service.segmentation.SegmentationVerticle;
 import com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle;
@@ -87,6 +89,36 @@ public class SendersVerticle extends AbstractVerticle {
                         // TODO: dynamic
                         .setWorkerPoolSize(4)
                         .setWorkerPoolName("attributes-calculation-worker"),
+                    false,
+                    startTimeMillis))
+        .compose(
+            next ->
+                deployVerticle(
+                    MemberFunctionsVerticle.class,
+                    startPromise,
+                    new DeploymentOptions()
+                        // TODO: dynamic
+                        .setInstances(4)
+                        .setConfig(brokerConfig.get())
+                        .setWorker(true)
+                        // TODO: dynamic
+                        .setWorkerPoolSize(4)
+                        .setWorkerPoolName("member-functions-worker"),
+                    false,
+                    startTimeMillis))
+        .compose(
+            next ->
+                deployVerticle(
+                    MembersSummaryVerticle.class,
+                    startPromise,
+                    new DeploymentOptions()
+                        // TODO: dynamic
+                        .setInstances(4)
+                        .setConfig(brokerConfig.get())
+                        .setWorker(true)
+                        // TODO: dynamic
+                        .setWorkerPoolSize(4)
+                        .setWorkerPoolName("members-summary-worker"),
                     false,
                     startTimeMillis))
         .compose(
