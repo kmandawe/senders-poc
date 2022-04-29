@@ -53,6 +53,8 @@ public class BrokerConfig {
       httpEnabled = redisQueuesConfig.getBoolean(REDISQUEUES_HTTP_ENABLED);
     }
     return RedisQueuesConfig.builder()
+        .redisHost(redisQueuesConfig.getString(REDISQUEUES_REDISHOST))
+        .redisPort(redisQueuesConfig.getInteger(REDISQUEUES_REDISPORT))
         .address(redisQueuesConfig.getString(REDISQUEUES_ADDRESS))
         .httpRequestHandlerEnabled(httpEnabled)
         .processorAddress(redisQueuesConfig.getString(REDISQUEUES_PROCESSOR_ADDRESS))
