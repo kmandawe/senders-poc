@@ -11,8 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.cheetahdigital.senderspoc.service.redisqueues.util.RedisQueuesAPI.*;
-import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.EB_SEGMENTATION;
-import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.SP_RESOLVE_ATTRIBUTES;
+import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.*;
 import static com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle.EB_STATS;
 import static com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle.JOB_BATCH_UPDATE;
 
@@ -118,8 +117,9 @@ public class SegmentationVerticle extends AbstractVerticle {
                   .put("senderId", senderId)
                   .put("memberIds", memberIds)
                   .put("batch", batchInProcess);
+          val senderIdQueueName = SP_RESOLVE_ATTRIBUTES + "-" + senderId;
           redisQueuesSend(
-              buildEnqueueOperation(SP_RESOLVE_ATTRIBUTES, payload),
+              buildEnqueueOperation(senderIdQueueName, payload),
               resolveAttributeMessage -> {
                 JsonObject responseBody = resolveAttributeMessage.result().body();
                 String status = responseBody.getString(STATUS);
