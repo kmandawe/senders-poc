@@ -1,6 +1,12 @@
 version: "1.0"
 server:
   port: 8888
+db:
+  host: 'localhost'
+  port: 8027
+  database: 'senders_poc'
+  user: 'msandbox'
+  password: 'msandbox'
 redisQueues:
   redisHost: 'localhost'
   redisPort: 6379

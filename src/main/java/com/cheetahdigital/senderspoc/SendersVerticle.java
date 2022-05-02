@@ -1,7 +1,10 @@
 package com.cheetahdigital.senderspoc;
 
 import com.cheetahdigital.senderspoc.api.RestApiVerticle;
+import com.cheetahdigital.senderspoc.common.config.BrokerConfig;
 import com.cheetahdigital.senderspoc.common.config.ConfigLoader;
+import com.cheetahdigital.senderspoc.common.config.DbConfig;
+import com.cheetahdigital.senderspoc.db.FlyWayMigration;
 import com.cheetahdigital.senderspoc.service.attrcalculation.AttributesCalculationVerticle;
 import com.cheetahdigital.senderspoc.service.memberfunctions.MemberFunctionsVerticle;
 import com.cheetahdigital.senderspoc.service.membersummary.MembersSummaryVerticle;
@@ -34,6 +37,8 @@ public class SendersVerticle extends AbstractVerticle {
               log.info("Current Application Version is: {}", configuration.getVersion());
               brokerConfig.set(JsonObject.mapFrom(configuration));
             })
+        .compose(
+            next -> migrateDatabase(BrokerConfig.from(brokerConfig.get()).getDb(), startPromise))
         .compose(
             next ->
                 deployVerticle(
@@ -171,6 +176,12 @@ public class SendersVerticle extends AbstractVerticle {
                 startPromise.complete();
               }
             });
+  }
+
+  private Future<Void> migrateDatabase(DbConfig dbConfig, Promise<Void> startPromise) {
+    return FlyWayMigration.migrate(vertx, dbConfig)
+        .onFailure(startPromise::fail)
+        .onSuccess(id -> log.info("Migrated db schema to latest version!"));
   }
 
   private int processors() {

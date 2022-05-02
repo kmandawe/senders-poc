@@ -16,6 +16,7 @@ import static com.cheetahdigital.senderspoc.common.config.ConfigLoader.*;
 @ToString
 public class BrokerConfig {
   ServerConfig server;
+  DbConfig db;
   RedisQueuesConfig redisQueues;
   String version;
   SegmentationConfig segmentation;
@@ -30,6 +31,7 @@ public class BrokerConfig {
     }
     return BrokerConfig.builder()
         .server(parseServerConfig(config))
+        .db(parseDbConfig(config))
         .version(version)
         .redisQueues(parseRedisQueuesConfig(config))
         .segmentation(parseSegmentationConfig(config))
@@ -122,5 +124,41 @@ public class BrokerConfig {
       instances = MEMBERS_SUMMARY_THREADS_DEFAULT;
     }
     return MembersSummaryConfig.builder().instances(instances).build();
+  }
+
+  private static DbConfig parseDbConfig(final JsonObject config) {
+    final String dbHostProperties =
+        config.getJsonObject(DB, config) != null ? config.getJsonObject(DB).getString(HOST) : null;
+    final String dbHost = Optional.ofNullable(config.getString(DB_HOST)).orElse(dbHostProperties);
+
+    final Integer dbPortProperties =
+        config.getJsonObject(DB, config) != null ? config.getJsonObject(DB).getInteger(PORT) : null;
+    final Integer dbPort = Optional.ofNullable(config.getInteger(DB_PORT)).orElse(dbPortProperties);
+
+    final String dbDatabaseProperties =
+        config.getJsonObject(DB, config) != null
+            ? config.getJsonObject(DB).getString(DATABASE)
+            : null;
+    final String dbDatabase =
+        Optional.ofNullable(config.getString(DB_DATABASE)).orElse(dbDatabaseProperties);
+
+    final String dbUserProperties =
+        config.getJsonObject(DB, config) != null ? config.getJsonObject(DB).getString(USER) : null;
+    final String dbUser = Optional.ofNullable(config.getString(DB_USER)).orElse(dbUserProperties);
+
+    final String dbPasswordProperties =
+        config.getJsonObject(DB, config) != null
+            ? config.getJsonObject(DB).getString(PASSWORD)
+            : null;
+    final String dbPassword =
+        Optional.ofNullable(config.getString(DB_PASSWORD)).orElse(dbPasswordProperties);
+
+    return DbConfig.builder()
+        .host(dbHost)
+        .port(dbPort)
+        .database(dbDatabase)
+        .user(dbUser)
+        .password(dbPassword)
+        .build();
   }
 }

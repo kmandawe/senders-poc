@@ -23,13 +23,29 @@ public class ConfigLoader {
   public static final Integer MEMBER_FUNCTIONS_THREADS_DEFAULT = 20;
   public static final String MEMBERS_SUMMARY_THREADS = "MEMBERS_SUMMARY_THREADS";
   public static final Integer MEMBERS_SUMMARY_THREADS_DEFAULT = 20;
-  public static final String SERVER_PORT = "SERVER_PORT";
   public static final String CONFIG_FILE = "application.yml";
   public static final String INSTANCES = "instances";
   public static final String SERVER = "server";
   public static final String PORT = "port";
 
-  static final List<String> EXPOSED_ENVIRONMENT_VARIABLES = Arrays.asList(SERVER_PORT);
+  /***** Database Configuration *****/
+  public static final String DATABASE = "database";
+  public static final String DB = "db";
+  public static final String DB_CONFIG = "db";
+  public static final String DB_DATABASE = "DB_DATABASE";
+  public static final String DB_HOST = "DB_HOST";
+  public static final String DB_PASSWORD = "DB_PASSWORD";
+  public static final String DB_PORT = "DB_PORT";
+  public static final String DB_USER = "DB_USER";
+  public static final String HOST = "host";
+  public static final String PASSWORD = "password";
+  public static final String USER = "user";
+
+  /***** Server Configuration *****/
+  public static final String SERVER_PORT = "SERVER_PORT";
+
+  static final List<String> EXPOSED_ENVIRONMENT_VARIABLES =
+      Arrays.asList(DB_DATABASE, DB_HOST, DB_PASSWORD, DB_PORT, DB_USER, SERVER_PORT);
 
   /***** RedisQueues Configuration *****/
   public static final String REDISQUEUES_CONFIG = "redisQueues";

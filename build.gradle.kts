@@ -17,8 +17,10 @@ repositories {
 }
 
 val commonsCodecVersion = "1.15"
+val flywayVersion = "8.2.0"
 val junitJupiterVersion = "5.8.2"
 val jacksonVersion = "2.13.2.2"
+val mySqlConnectorVersion = "8.0.28"
 val slf4jApiVersion = "1.7.36"
 val vertxVersion = "4.2.7"
 
@@ -44,14 +46,19 @@ dependencies {
   implementation("io.vertx:vertx-config")
   implementation("io.vertx:vertx-config-yaml")
   implementation("io.vertx:vertx-core")
+  implementation("io.vertx:vertx-mysql-client")
   implementation("io.vertx:vertx-redis-client")
   implementation(platform("io.vertx:vertx-stack-depchain:$vertxVersion"))
+  implementation("io.vertx:vertx-sql-client-templates")
   implementation("io.vertx:vertx-web")
   implementation("io.vertx:vertx-zookeeper")
   implementation("org.apache.logging.log4j:log4j-api")
   implementation("org.apache.logging.log4j:log4j-core")
   implementation("org.apache.logging.log4j:log4j-slf4j-impl")
+  implementation("org.flywaydb:flyway-core:$flywayVersion")
   implementation("org.slf4j:slf4j-api:$slf4jApiVersion")
+
+  runtimeOnly("mysql:mysql-connector-java:$mySqlConnectorVersion")
 
   testImplementation("io.vertx:vertx-junit5")
   testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
