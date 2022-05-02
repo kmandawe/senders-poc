@@ -28,8 +28,16 @@ public class SendPipelineQueuesProcessor {
             message -> {
               final String queue = message.body().getString("queue");
               val payload = message.body().getString("payload");
+              val jsonPayload = new JsonObject(payload);
+              val senderId = jsonPayload.getString("senderId", "");
+              var switchQueue = queue;
+              // Remove the variable senderId suffix here to match queue name processing
+              if (!senderId.isEmpty()) {
+                val senderIdSuffix = "-" + senderId;
+                switchQueue = switchQueue.replace(senderIdSuffix, "");
+              }
 
-              switch (queue) {
+              switch (switchQueue) {
                 case SP_EXECUTE_QUEUE:
                   sendStartJobToStats(vertx, payload);
                   processSegmentation(vertx, message, queue, payload);

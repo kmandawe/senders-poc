@@ -1,0 +1,136 @@
+### To list the available endpoints use
+GET {{host}}:{{rq-port}}/queuing
+
+### The configuration information contains the currently active configuration values.
+GET {{host}}:{{rq-port}}/queuing/configuration
+
+### To set the configuration use
+POST {{host}}:{{rq-port}}/queuing/configuration
+Content-Type: application/json
+
+{
+  "processorDelayMax": 0
+}
+
+### The monitor information contains the active queues and their queue items count. To get the monitor information use
+GET {{host}}:{{rq-port}}/queuing/monitor
+
+###
+PUT {{host}}:{{rq-port}}/queuing/enqueue/myNewQueue
+Content-Type: application/json
+
+{
+  "payloadObject":{
+    "senderId": 2,
+    "batchSize": 1
+  },
+  "headers": []
+}
+
+### To list the active queues use
+GET {{host}}:{{rq-port}}/queuing/queues
+
+### To get the count of active queues only, use
+GET {{host}}:{{rq-port}}/queuing/queues?count=true
+
+### To list the queue items of a single queue use
+GET {{host}}:{{rq-port}}/queuing/queues/sp-execute-queue1
+
+### To delete all queue items of a single queue use
+DELETE {{host}}:{{rq-port}}/queuing/queues/sp-execute-queue1
+
+### To delete a custom subset of existing queues use
+POST {{host}}:{{rq-port}}//queuing/queues?bulkDelete=true
+Content-Type: application/json
+
+{
+  "queues": [
+    "myNewQueue"
+  ]
+}
+
+### To get a single queue item use
+GET {{host}}:{{rq-port}}/queuing/queues/myNewQueue/0
+
+### To replace a single queue item use
+PUT {{host}}:{{rq-port}}/queuing/queues/myNewQueue/0
+Content-Type: application/json
+
+{
+  "payloadObject":{
+    "senderId": 2,
+    "batchSize": 1
+  },
+  "headers": []
+}
+
+### To delete a single queue item use
+DELETE {{host}}:{{rq-port}}/queuing/queues/myQueue/0
+
+### To add a queue item (to the end of the queue) use
+POST {{host}}:{{rq-port}}/queuing/queues/myQueue/
+Content-Type: application/json
+
+{
+  "payloadObject":{
+    "senderId": 2,
+    "batchSize": 1
+  },
+  "headers": []
+}
+
+### To list all existing locks use
+GET {{host}}:{{rq-port}}/queuing/locks/
+
+### To add a lock use
+PUT {{host}}:{{rq-port}}/queuing/locks/myQueue
+Content-Type: application/json
+
+{
+
+}
+
+### To add multiple locks use
+POST {{host}}:{{rq-port}}/queuing/locks
+Content-Type: application/json
+
+{
+  "locks": [
+    "queue1",
+    "queue2"
+  ]
+}
+
+### To get a single lock use
+GET {{host}}:{{rq-port}}/queuing/locks/queue1
+
+
+### To delete a single lock use
+DELETE {{host}}:{{rq-port}}/queuing/locks/queue1
+
+### To delete a custom subset of existing locks use
+POST {{host}}:{{rq-port}}/queuing/locks?bulkDelete=true
+Content-Type: application/json
+
+{
+  "locks": [
+    "queue1",
+    "queue2"
+  ]
+}
+
+### To delete all existing locks use
+DELETE {{host}}:{{rq-port}}/queuing/locks
+
+
+### The statistics information contains the active queues and their queue items count plus the current number of failures and delay times in ms. To get the monitor information use
+GET {{host}}:{{rq-port}}/queuing/statistics
+
+### The speed evaluation collects and calculates the cumulated speed of all queues matchting the given filter. To get the speed information use
+GET {{host}}:{{rq-port}}/queuing/speed
+
+
+
+
+
+

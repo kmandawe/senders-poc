@@ -118,7 +118,7 @@ public class RedisQueuesHttpRequestHandler implements Handler<HttpServerRequest>
     /*
      * Enqueue or LockedEnqueue
      */
-    router.putWithRegex(prefix + "/enqueue/([^/]+)/").handler(this::enqueueOrLockedEnqueue);
+    router.putWithRegex(prefix + "/enqueue/([^/]+)").handler(this::enqueueOrLockedEnqueue);
 
     /*
      * List queue items
