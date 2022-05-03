@@ -10,6 +10,9 @@ db:
 redisQueues:
   redisHost: 'localhost'
   redisPort: 6379
+  redisAuth: ''
+  redisMaxPoolSize: 200
+  redisMaxWaitSize: -1
   address: 'redis-queues'
   httpRequestHandlerEnabled: true
   processorAddress: 'redis-queues-processor'

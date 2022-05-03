@@ -32,6 +32,7 @@ public class AttributesCalculationVerticle extends AbstractVerticle {
   private void processAttributesCalculation(Message<JsonObject> message) {
     val payload = message.body();
     val senderId = payload.getString("senderId");
+    val jobId = payload.getString("jobId");
     val startTime = payload.getLong("startTime");
     val batch = payload.getInteger("batch");
     val memberIds = payload.getJsonArray("memberIds");
@@ -61,7 +62,7 @@ public class AttributesCalculationVerticle extends AbstractVerticle {
                 message.reply(new JsonObject().put(STATUS, ERROR));
               }
               sendToSmf(smfPaylod);
-              sendBatchCompletedToStats(senderId, 1, memberSize);
+              sendBatchCompletedToStats(senderId, 1, memberSize, jobId);
               log.info(
                   "ATTRIBUTES-CALCULATION: Completed attributes calculation for senderID {}, batch: {}",
                   senderId,
@@ -70,7 +71,8 @@ public class AttributesCalculationVerticle extends AbstractVerticle {
             });
   }
 
-  private void sendBatchCompletedToStats(String senderId, long batchCompleted, long memberSize) {
+  private void sendBatchCompletedToStats(
+      String senderId, long batchCompleted, long memberSize, String jobId) {
     JsonObject batchToProcessPayload =
         new JsonObject()
             .put("operation", JOB_BATCH_UPDATE)
@@ -78,6 +80,7 @@ public class AttributesCalculationVerticle extends AbstractVerticle {
                 "payload",
                 new JsonObject()
                     .put("senderId", senderId)
+                    .put("jobId", jobId)
                     .put("batchCompleted", batchCompleted)
                     .put("memberSize", memberSize));
     vertx
@@ -86,10 +89,14 @@ public class AttributesCalculationVerticle extends AbstractVerticle {
             EB_STATS,
             batchToProcessPayload,
             statsMessage -> {
-              JsonObject responseBody = statsMessage.result().body();
-              log.debug(
-                  "Acknowledged BatchCompleted stats with status: {}",
-                  responseBody.getString(STATUS));
+              if (statsMessage.failed()) {
+                log.error("Failed BatchCompleted stats: ", statsMessage.cause());
+              } else {
+                JsonObject responseBody = statsMessage.result().body();
+                log.debug(
+                    "Acknowledged BatchCompleted stats with status: {}",
+                    responseBody.getString(STATUS));
+              }
             });
   }
 

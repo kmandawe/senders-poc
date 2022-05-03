@@ -1,38 +1,64 @@
 package com.cheetahdigital.senderspoc.service.stats;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import io.vertx.core.json.JsonObject;
+import lombok.*;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
-@Setter
-@Getter
-@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Data
+@Builder(toBuilder = true)
+@EqualsAndHashCode
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class SenderJob {
-  private String senderId;
+  private String jobId;
+  private Integer senderId;
   private String status;
-  private long startTimeMillis;
-  private long endTimeMillis;
+
+  @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
+  private LocalDateTime startTime;
+
+  @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
+  private LocalDateTime endTime;
+
+  @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
+  private LocalDateTime lastUpdateTime;
+
   private String message;
   private String errorMessage;
-  private AtomicLong membersProcessed;
-  private AtomicLong batchToProcess;
-  private AtomicLong batchCompleted;
+  private Long membersProcessed;
+  private Long batchToProcess;
+  private Long batchCompleted;
+
+  public JsonObject toJsonObject() {
+    return JsonObject.mapFrom(this);
+  }
 
   @Override
   public String toString() {
+    var completionTime = -1L;
+    if (endTime != null) {
+      completionTime = ChronoUnit.MILLIS.between(startTime, endTime);
+    }
     return "{"
-        + "senderId='"
+        + "jobId='"
+        + jobId
+        + '\''
+        + ", senderId='"
         + senderId
         + '\''
         + ", status='"
         + status
         + '\''
-        + ", startTimeMillis="
-        + startTimeMillis
-        + ", endTimeMillis="
-        + endTimeMillis
+        + ", startTime="
+        + startTime
+        + ", endTimes="
+        + endTime
         + ", message='"
         + message
         + '\''
@@ -42,7 +68,7 @@ public class SenderJob {
         + ", membersProcessed="
         + membersProcessed
         + ", completionTime="
-        + (endTimeMillis - startTimeMillis)
+        + (completionTime)
         + ", batchToProcess="
         + batchToProcess
         + ", batchCompleted="

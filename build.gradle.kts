@@ -19,7 +19,7 @@ repositories {
 val commonsCodecVersion = "1.15"
 val flywayVersion = "8.2.0"
 val junitJupiterVersion = "5.8.2"
-val jacksonVersion = "2.13.2.2"
+val jacksonVersion = "2.13.1"
 val mySqlConnectorVersion = "8.0.28"
 val slf4jApiVersion = "1.7.36"
 val vertxVersion = "4.2.7"
@@ -42,6 +42,7 @@ dependencyManagement {
 
 dependencies {
   implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
   implementation("commons-codec:commons-codec:$commonsCodecVersion")
   implementation("io.vertx:vertx-config")
   implementation("io.vertx:vertx-config-yaml")

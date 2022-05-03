@@ -53,6 +53,9 @@ public class ConfigLoader {
   public static final String REDISQUEUES_ADDRESS = "address";
   public static final String REDISQUEUES_REDISHOST = "redisHost";
   public static final String REDISQUEUES_REDISPORT = "redisPort";
+  public static final String REDISQUEUES_REDISAUTH = "redisAuth";
+  public static final String REDISQUEUES_REDISMAXPOOLSIZE = "redisMaxPoolSize";
+  public static final String REDISQUEUES_REDISMAXWAITSIZE = "redisMaxWaitSize";
   public static final String REDISQUEUES_HTTP_ENABLED = "httpRequestHandlerEnabled";
   public static final String REDISQUEUES_PROCESSOR_ADDRESS = "processorAddress";
 

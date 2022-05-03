@@ -12,8 +12,11 @@ import com.cheetahdigital.senderspoc.service.redisqueues.RedisQueuesVerticle;
 import com.cheetahdigital.senderspoc.service.segmentation.SegmentationVerticle;
 import com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle;
 import com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.vertx.core.*;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.jackson.DatabindCodec;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
@@ -28,6 +31,7 @@ public class SendersVerticle extends AbstractVerticle {
   @Override
   public void start(Promise<Void> startPromise) {
     var startTimeMillis = System.currentTimeMillis();
+    registerObjectMapperModules();
     AtomicReference<JsonObject> brokerConfig = new AtomicReference<>();
     ConfigLoader.load(vertx)
         .onFailure(startPromise::fail)
@@ -142,6 +146,14 @@ public class SendersVerticle extends AbstractVerticle {
                     Math.max(processors() / 4, 2),
                     true,
                     startTimeMillis));
+  }
+
+  private void registerObjectMapperModules() {
+    ObjectMapper mapper = DatabindCodec.mapper();
+    mapper.registerModule(new JavaTimeModule());
+
+    ObjectMapper prettyMapper = DatabindCodec.prettyMapper();
+    prettyMapper.registerModule(new JavaTimeModule());
   }
 
   private Future<String> deployVerticle(

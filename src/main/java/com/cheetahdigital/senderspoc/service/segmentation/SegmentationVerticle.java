@@ -11,7 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.cheetahdigital.senderspoc.service.redisqueues.util.RedisQueuesAPI.*;
-import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.*;
+import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.EB_SEGMENTATION;
+import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.SP_RESOLVE_ATTRIBUTES;
 import static com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle.EB_STATS;
 import static com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle.JOB_BATCH_UPDATE;
 
@@ -28,9 +29,11 @@ public class SegmentationVerticle extends AbstractVerticle {
   }
 
   private void processSegmentationAndDoBatchedAttributesCalculation(Message<JsonObject> message) {
-    val senderId = message.body().getString("senderId");
-    val batchSizeParam = message.body().getString("batchSize");
-    val startTime = message.body().getLong("startTime");
+    val jsonPayload = message.body();
+    val senderId = jsonPayload.getString("senderId");
+    val jobId = jsonPayload.getString("jobId");
+    val batchSizeParam = jsonPayload.getString("batchSize");
+    val startTime = jsonPayload.getLong("startTime");
     val now = System.currentTimeMillis();
     val segmentSize = Integer.parseInt(senderId);
     val batchSize = Integer.parseInt(batchSizeParam);
@@ -52,14 +55,15 @@ public class SegmentationVerticle extends AbstractVerticle {
     if (segmentSize == 0) {
       log.warn("SEGMENTATION: Completed segmentation, segmentation has no result");
       message.reply(new JsonObject().put(STATUS, OK));
-      sendBatchToProcessToStats(senderId, 0);
+      sendBatchToProcessToStats(senderId, 0, jobId);
     } else {
       int batches = getBatches(segmentSize, batchSize);
-      sendBatchToProcessToStats(senderId, batches);
+      sendBatchToProcessToStats(senderId, batches, jobId);
       List<Future> batchFutures = new ArrayList<>();
       for (int i = 0; i < batches; i++) {
         // populate memberIds and queue job for one batch
-        batchFutures.add(populateBatchMembersAndQueueJob(senderId, segmentSize, batchSize, i));
+        batchFutures.add(
+            populateBatchMembersAndQueueJob(senderId, segmentSize, batchSize, i, jobId));
       }
       CompositeFuture.all(batchFutures)
           .onSuccess(
@@ -73,28 +77,35 @@ public class SegmentationVerticle extends AbstractVerticle {
     }
   }
 
-  private void sendBatchToProcessToStats(String senderId, long batchToProcess) {
+  private void sendBatchToProcessToStats(String senderId, long batchToProcess, String jobId) {
     JsonObject batchToProcessPayload =
         new JsonObject()
             .put("operation", JOB_BATCH_UPDATE)
             .put(
                 "payload",
-                new JsonObject().put("senderId", senderId).put("batchToProcess", batchToProcess));
+                new JsonObject()
+                    .put("senderId", senderId)
+                    .put("jobId", jobId)
+                    .put("batchToProcess", batchToProcess));
     vertx
         .eventBus()
         .<JsonObject>request(
             EB_STATS,
             batchToProcessPayload,
             statsMessage -> {
-              JsonObject responseBody = statsMessage.result().body();
-              log.debug(
-                  "Acknowledged BatchToProcess stats with status: {}",
-                  responseBody.getString(STATUS));
+              if (statsMessage.failed()) {
+                log.error("Failed BatchToProcess stats: ", statsMessage.cause());
+              } else {
+                JsonObject responseBody = statsMessage.result().body();
+                log.debug(
+                    "Acknowledged BatchToProcess stats with status: {}",
+                    responseBody.getString(STATUS));
+              }
             });
   }
 
   private Future<Void> populateBatchMembersAndQueueJob(
-      String senderId, int segmentSize, int batchSize, int i) {
+      String senderId, int segmentSize, int batchSize, int i, String jobId) {
     List<String> memberIds = new ArrayList<>();
     for (int j = 1; j <= batchSize; j++) {
       int memberIndex = (i * batchSize) + j;
@@ -105,16 +116,17 @@ public class SegmentationVerticle extends AbstractVerticle {
       memberIds.add(memberId);
     }
     int batchInProcess = i + 1;
-    return queueJobForBatch(senderId, memberIds, batchInProcess);
+    return queueJobForBatch(senderId, memberIds, batchInProcess, jobId);
   }
 
   private Future<Void> queueJobForBatch(
-      String senderId, List<String> memberIds, int batchInProcess) {
+      String senderId, List<String> memberIds, int batchInProcess, String jobId) {
     return Future.future(
         promise -> {
           JsonObject payload =
               new JsonObject()
                   .put("senderId", senderId)
+                  .put("jobId", jobId)
                   .put("memberIds", memberIds)
                   .put("batch", batchInProcess);
           val senderIdQueueName = SP_RESOLVE_ATTRIBUTES + "-" + senderId;

@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static com.cheetahdigital.senderspoc.service.redisqueues.util.RedisQueuesAPI.*;
 import static com.cheetahdigital.senderspoc.service.sendpipeline.SendPipelineVerticle.*;
@@ -39,8 +40,9 @@ public class SendPipelineQueuesProcessor {
 
               switch (switchQueue) {
                 case SP_EXECUTE_QUEUE:
-                  sendStartJobToStats(vertx, payload);
-                  processSegmentation(vertx, message, queue, payload);
+                  val jobId = UUID.randomUUID().toString().substring(0, 8);
+                  sendStartJobToStats(vertx, payload, jobId);
+                  processSegmentation(vertx, message, queue, payload, jobId);
                   break;
                 case SP_RESOLVE_ATTRIBUTES:
                   processResolveAttributes(vertx, message, queue, payload);
@@ -51,13 +53,13 @@ public class SendPipelineQueuesProcessor {
             });
   }
 
-  private static void sendStartJobToStats(Vertx vertx, String payload) {
+  private static void sendStartJobToStats(Vertx vertx, String payload, String jobId) {
     val jsonPayload = new JsonObject(payload);
     val senderId = jsonPayload.getString("senderId");
     JsonObject startJobPayload =
         new JsonObject()
             .put("operation", JOB_START)
-            .put("payload", new JsonObject().put("senderId", senderId));
+            .put("payload", new JsonObject().put("senderId", senderId).put("jobId", jobId));
     eventBusSend(
         vertx,
         EB_STATS,
@@ -117,11 +119,12 @@ public class SendPipelineQueuesProcessor {
   }
 
   private static void processSegmentation(
-      Vertx vertx, Message<JsonObject> message, String queue, String payload) {
+      Vertx vertx, Message<JsonObject> message, String queue, String payload, String jobId) {
     val jsonPayload = new JsonObject(payload);
     val senderId = jsonPayload.getString("senderId");
     long startTime = System.currentTimeMillis();
     jsonPayload.put("startTime", startTime);
+    jsonPayload.put("jobId", jobId);
     log.info("Sending segmentation job now: {}", LocalDateTime.now());
     eventBusSend(
         vertx,

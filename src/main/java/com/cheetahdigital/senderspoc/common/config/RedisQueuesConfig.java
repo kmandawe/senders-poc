@@ -13,4 +13,7 @@ public class RedisQueuesConfig {
   @Builder.Default String processorAddress = "redis-queues-processor";
   String redisHost;
   int redisPort;
+  String redisAuth;
+  int redisMaxPoolSize;
+  int redisMaxWaitSize;
 }

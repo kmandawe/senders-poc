@@ -1,7 +1,7 @@
 package com.cheetahdigital.senderspoc.api;
 
 import com.cheetahdigital.senderspoc.api.sendpipeline.SendPipelineRestApi;
-import com.cheetahdigital.senderspoc.api.stats.SendersStatsRestApi;
+import com.cheetahdigital.senderspoc.api.stats.SenderStatsRestApi;
 import com.cheetahdigital.senderspoc.common.config.BrokerConfig;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
@@ -26,7 +26,7 @@ public class RestApiVerticle extends AbstractVerticle {
     restApi.route().handler(BodyHandler.create()).failureHandler(handleFailure());
 
     SendPipelineRestApi.attach(restApi);
-    SendersStatsRestApi.attach(restApi);
+    SenderStatsRestApi.attach(restApi);
 
     var port = configuration.getServer().getPort();
 
