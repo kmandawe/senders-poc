@@ -5,6 +5,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,9 @@ public class GetSenderStatsHandler implements Handler<RoutingContext> {
         payload,
         message -> {
           JsonObject responseBody = message.result().body();
-          log.info("Current stats: {}", responseBody.toString());
+          String senderJobs = responseBody.getString("sender_jobs");
+          responseBody.put("sender_jobs", new JsonArray(senderJobs));
+          log.info("Current stats: {}", responseBody);
           context
               .response()
               .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)

@@ -5,6 +5,7 @@ import com.cheetahdigital.senderspoc.db.DBPools;
 import com.cheetahdigital.senderspoc.db.DbResponse;
 import io.vertx.core.*;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.redis.client.RedisAPI;
 import io.vertx.redis.client.RedisOptions;
@@ -234,7 +235,7 @@ public class SenderStatsVerticle extends AbstractVerticle {
                           }
                           List<SenderJob> senderJobList = new ArrayList<>();
                           resp.forEach(senderJobList::add);
-                          stats.put("sender_jobs", senderJobList.toString());
+                          stats.put("sender_jobs", new JsonArray(senderJobList).toString());
                           message.reply(stats);
                         }));
   }

@@ -34,6 +34,15 @@ public class SenderJob {
   private Long membersProcessed;
   private Long batchToProcess;
   private Long batchCompleted;
+  private Long completionTime;
+
+  public Long getCompletionTime() {
+    this.completionTime = -1L;
+    if (endTime != null) {
+      this.completionTime = ChronoUnit.MILLIS.between(startTime, endTime);
+    }
+    return this.completionTime;
+  }
 
   public JsonObject toJsonObject() {
     return JsonObject.mapFrom(this);
