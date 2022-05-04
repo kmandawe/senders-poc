@@ -7,6 +7,7 @@ import io.vertx.core.*;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.shareddata.Lock;
 import io.vertx.redis.client.RedisAPI;
 import io.vertx.redis.client.RedisOptions;
 import io.vertx.redis.client.impl.RedisClient;
@@ -120,31 +121,48 @@ public class SenderStatsVerticle extends AbstractVerticle {
     val jobId = payload.getString("jobId");
     val batchToProcess = payload.getLong("batchToProcess");
     val batchCompleted = payload.getLong("batchCompleted");
-
-    db.withTransaction(
-            client ->
-                queryForSenderJob(client, jobId)
-                    .compose(
-                        senderJobs ->
-                            performSenderJobUpdate(
-                                client,
-                                senderId,
-                                senderJobs,
-                                batchToProcess,
-                                batchCompleted,
-                                payload)))
-        .onComplete(
-            txn -> {
-              if (txn.succeeded()) {
-                val successMessage = txn.result();
-                log.info(
-                    "Job batch update done with message {} at {}",
-                    successMessage,
-                    LocalDateTime.now());
-                message.reply(new JsonObject().put(STATUS, OK));
+    log.info(
+        "Starting to update Sender Job for jobId: {}, batchToProcess{}, batchCompleted{}",
+        jobId,
+        batchToProcess,
+        batchCompleted);
+    vertx
+        .sharedData()
+        .getLock(
+            jobId,
+            lockRes -> {
+              if (lockRes.succeeded()) {
+                val lock = lockRes.result();
+                db.withTransaction(
+                        client ->
+                            queryForSenderJob(client, jobId)
+                                .compose(
+                                    senderJobs ->
+                                        performSenderJobUpdate(
+                                            client,
+                                            senderId,
+                                            senderJobs,
+                                            batchToProcess,
+                                            batchCompleted,
+                                            payload)))
+                    .onComplete(
+                        txn -> {
+                          lock.release();
+                          if (txn.succeeded()) {
+                            val successMessage = txn.result();
+                            log.info(
+                                "Job batch update done with message {} at {}",
+                                successMessage,
+                                LocalDateTime.now());
+                            message.reply(new JsonObject().put(STATUS, OK));
+                          } else {
+                            Throwable cause = txn.cause();
+                            log.error("Job batch update error: ", cause);
+                            message.reply(new JsonObject().put(STATUS, ERROR));
+                          }
+                        });
               } else {
-                Throwable cause = txn.cause();
-                log.error("Job batch update error: ", cause);
+                log.error("Update sender job with jobId {} cannot obtain a lock!", jobId);
                 message.reply(new JsonObject().put(STATUS, ERROR));
               }
             });
@@ -165,23 +183,43 @@ public class SenderStatsVerticle extends AbstractVerticle {
             .batchToProcess(0L)
             .batchCompleted(0L)
             .build();
-    SqlTemplate.forUpdate(
-            db,
-            "INSERT into sender_jobs (job_id, sender_id, status, start_time, last_update_time,"
-                + " members_processed, batch_to_process, batch_completed) VALUES (#{job_id}, #{sender_id}, #{status},"
-                + " #{start_time}, #{last_update_time}, #{members_processed}, #{batch_to_process}, #{batch_completed})")
-        .mapFrom(SenderJob.class)
-        .execute(senderJob)
-        .onFailure(
-            DbResponse.errorHandler(
-                message, "Failed inserting Sender Job with senderId: " + senderId))
-        .onSuccess(
-            resp -> {
-              log.info(
-                  "Stats created a new job with senderId {} successfully at {}",
-                  senderId,
-                  LocalDateTime.now());
-              message.reply(new JsonObject().put(STATUS, OK));
+    vertx
+        .sharedData()
+        .getLock(
+            jobId,
+            lockRes -> {
+              if (lockRes.succeeded()) {
+                Lock lock = lockRes.result();
+                SqlTemplate.forUpdate(
+                        db,
+                        "INSERT into sender_jobs (job_id, sender_id, status, start_time, last_update_time,"
+                            + " members_processed, batch_to_process, batch_completed) VALUES (#{job_id}, #{sender_id}, #{status},"
+                            + " #{start_time}, #{last_update_time}, #{members_processed}, #{batch_to_process}, #{batch_completed})")
+                    .mapFrom(SenderJob.class)
+                    .execute(senderJob)
+                    .onFailure(
+                        error -> {
+                          lock.release();
+                          val errorMessage =
+                              "Failed inserting Sender Job with senderId: " + senderId;
+                          log.error("Failure: ", error);
+                          val response =
+                              new JsonObject().put(STATUS, ERROR).put("message", errorMessage);
+                          message.reply(response);
+                        })
+                    .onSuccess(
+                        resp -> {
+                          log.info(
+                              "Stats created a new job with senderId {} successfully at {}",
+                              senderId,
+                              LocalDateTime.now());
+                          message.reply(new JsonObject().put(STATUS, OK));
+                          lock.release();
+                        });
+              } else {
+                log.error("Create new job with jobId {} cannot obtain a lock!", jobId);
+                message.reply(new JsonObject().put(STATUS, ERROR));
+              }
             });
   }
 
