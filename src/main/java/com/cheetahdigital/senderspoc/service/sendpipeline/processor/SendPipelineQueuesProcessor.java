@@ -99,23 +99,30 @@ public class SendPipelineQueuesProcessor {
                   type,
                   resp.cause());
             }
-            log.info("Processed Redis message {} from QUEUE: {}", payload, queue);
-            // Tag as OK to not reprocess
-            message.reply(new JsonObject().put(STATUS, OK));
           } else {
             JsonObject responseBody = resp.result().body();
             String status = responseBody.getString(STATUS);
             long elapsed = System.currentTimeMillis() - startTime;
+            val memberList = jsonPayload.getJsonArray("memberIds").getList();
+            String memberFirst = null;
+            String memberLast = null;
+            if (!memberList.isEmpty()) {
+              memberFirst = (String) memberList.get(0);
+              memberLast = (String) memberList.get(memberList.size() - 1);
+            }
+
             log.info(
-                "EVENT-BUS:{} Done processing resolve attributes job Id {} with status: {} for {}ms",
+                "EVENT-BUS:{} Done processing resolve attributes job Id {} with member {} to member {} with status: {} for {}ms",
                 EB_RESOLVE_ATTRIBUTES,
                 senderId,
+                memberFirst,
+                memberLast,
                 status,
                 elapsed);
-            log.info("Processed Redis message {} from QUEUE: {}", payload, queue);
-            message.reply(new JsonObject().put(STATUS, OK));
           }
         });
+    log.info("Processing Redis attributes calculation message {} from QUEUE: {}", payload, queue);
+    message.reply(new JsonObject().put(STATUS, OK));
   }
 
   private static void processSegmentation(
@@ -203,7 +210,7 @@ public class SendPipelineQueuesProcessor {
                 });
           }
         });
-    log.debug("Processed message {} from QUEUE: {}", payload, queue);
+    log.info("Processing Redis segmentation message {} from QUEUE: {}", payload, queue);
     message.reply(new JsonObject().put(STATUS, OK));
   }
 

@@ -69,7 +69,7 @@ public class SendersVerticle extends AbstractVerticle {
                   SegmentationVerticle.class,
                   startPromise,
                   new DeploymentOptions()
-                      .setMaxWorkerExecuteTime(1000)
+                      .setMaxWorkerExecuteTime(2500)
                       .setMaxWorkerExecuteTimeUnit(TimeUnit.SECONDS)
                       .setInstances(instances)
                       .setConfig(brokerConfig.get())

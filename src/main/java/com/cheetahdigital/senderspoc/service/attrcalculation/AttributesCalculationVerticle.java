@@ -1,7 +1,10 @@
 package com.cheetahdigital.senderspoc.service.attrcalculation;
 
 import io.vertx.core.*;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.eventbus.ReplyException;
+import io.vertx.core.eventbus.ReplyFailure;
 import io.vertx.core.impl.ConversionHelper;
 import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +20,9 @@ import static com.cheetahdigital.senderspoc.service.stats.SenderStatsVerticle.JO
 
 @Slf4j
 public class AttributesCalculationVerticle extends AbstractVerticle {
+
+  private static final int ATTTRIBUTES_CALC_TIMEOUT = 90000;
+
   @Override
   public void start(Promise<Void> startPromise) {
     // TODO: whole logic
@@ -25,6 +31,12 @@ public class AttributesCalculationVerticle extends AbstractVerticle {
         .eventBus()
         .<JsonObject>consumer(EB_RESOLVE_ATTRIBUTES)
         .handler(this::processAttributesCalculation);
+    // TODO: MOVE TO MAIN verticle
+    vertx.exceptionHandler(
+        event -> {
+          // do what you meant to do on uncaught exception, e.g.:
+          log.error(event + " Got uncaught exception: ", event);
+        });
     startPromise.complete();
   }
 
@@ -68,6 +80,11 @@ public class AttributesCalculationVerticle extends AbstractVerticle {
                   senderId,
                   batch);
               message.reply(new JsonObject().put(STATUS, OK));
+            })
+        .onFailure(
+            failure -> {
+              log.error("Attributes calculation for job ID {} failed: ", jobId, failure);
+              // TODO: send failed jobs to stats
             });
   }
 
@@ -127,18 +144,33 @@ public class AttributesCalculationVerticle extends AbstractVerticle {
               EB_MEMBER_FUNCTIONS,
               payload,
               resp -> {
-                JsonObject responseBody = resp.result().body();
-                String status = responseBody.getString(STATUS);
-                String result = responseBody.getString(RESULT);
-                long elapsed = System.currentTimeMillis() - memberFunctionStart;
-                log.info(
-                    "EVENT-BUS: {} got member function result for : senderId {} batch {} with status {}, took {}ms",
-                    EB_MEMBER_FUNCTIONS,
-                    senderId,
-                    batch,
-                    status,
-                    elapsed);
-                promise.complete(result);
+                if (resp.succeeded()) {
+                  JsonObject responseBody = resp.result().body();
+                  String status = responseBody.getString(STATUS);
+                  String result = responseBody.getString(RESULT);
+                  long elapsed = System.currentTimeMillis() - memberFunctionStart;
+                  log.info(
+                      "EVENT-BUS: {} got member function result for : senderId {} batch {} with status {}, took {}ms",
+                      EB_MEMBER_FUNCTIONS,
+                      senderId,
+                      batch,
+                      status,
+                      elapsed);
+                  promise.complete(result);
+                } else {
+                  val cause = resp.cause();
+                  if (cause instanceof ReplyException
+                      && ((ReplyException) cause).failureType() == ReplyFailure.TIMEOUT) {
+                    log.error(
+                        "Member function computation taking long with message: {}",
+                        cause.getMessage());
+                    // Don't fulfill promise and wait for completion?
+                    promise.fail(cause);
+                  } else {
+                    log.error("Got member function error: ", resp.cause());
+                    promise.fail(cause);
+                  }
+                }
               });
         });
   }
@@ -152,24 +184,40 @@ public class AttributesCalculationVerticle extends AbstractVerticle {
               EB_MEMBERS_SUMMARY,
               payload,
               resp -> {
-                JsonObject responseBody = resp.result().body();
-                String status = responseBody.getString(STATUS);
-                JsonObject result = responseBody.getJsonObject(RESULT);
-                long elapsed = System.currentTimeMillis() - membersSummaryStart;
-                log.info(
-                    "EVENT-BUS: {} got member summary result for : senderId {} batch {} with status {}, took {}ms",
-                    EB_MEMBERS_SUMMARY,
-                    senderId,
-                    batch,
-                    status,
-                    elapsed);
-                promise.complete(ConversionHelper.fromJsonObject(result));
+                if (resp.succeeded()) {
+                  JsonObject responseBody = resp.result().body();
+                  String status = responseBody.getString(STATUS);
+                  JsonObject result = responseBody.getJsonObject(RESULT);
+                  long elapsed = System.currentTimeMillis() - membersSummaryStart;
+                  log.info(
+                      "EVENT-BUS: {} got member summary result for : senderId {} batch {} with status {}, took {}ms",
+                      EB_MEMBERS_SUMMARY,
+                      senderId,
+                      batch,
+                      status,
+                      elapsed);
+                  promise.complete(ConversionHelper.fromJsonObject(result));
+                } else {
+                  val cause = resp.cause();
+                  if (cause instanceof ReplyException
+                      && ((ReplyException) cause).failureType() == ReplyFailure.TIMEOUT) {
+                    log.error(
+                        "Member summary computation taking long with message: {}",
+                        cause.getMessage());
+                    // Don't fulfill promise and wait for completion
+                    promise.fail(cause);
+                  } else {
+                    log.error("Got member summary error: ", resp.cause());
+                    promise.fail(cause);
+                  }
+                }
               });
         });
   }
 
   private void eventBusSend(
       String address, JsonObject payload, Handler<AsyncResult<Message<JsonObject>>> handler) {
-    vertx.eventBus().request(address, payload, handler);
+    val deliveryOptions = new DeliveryOptions().setSendTimeout(ATTTRIBUTES_CALC_TIMEOUT);
+    vertx.eventBus().request(address, payload, deliveryOptions, handler);
   }
 }

@@ -34,10 +34,10 @@ GET {{host}}:{{rq-port}}/queuing/queues
 GET {{host}}:{{rq-port}}/queuing/queues?count=true
 
 ### To list the queue items of a single queue use
-GET {{host}}:{{rq-port}}/queuing/queues/sp-execute-queue1
+GET {{host}}:{{rq-port}}/queuing/queues/sp-resolve-attributes-1000000
 
 ### To delete all queue items of a single queue use
-DELETE {{host}}:{{rq-port}}/queuing/queues/sp-execute-queue1
+DELETE {{host}}:{{rq-port}}/queuing/queues/sp-resolve-attributes-1000000
 
 ### To delete a custom subset of existing queues use
 POST {{host}}:{{rq-port}}//queuing/queues?bulkDelete=true

@@ -122,7 +122,7 @@ public class SenderStatsVerticle extends AbstractVerticle {
     val batchToProcess = payload.getLong("batchToProcess");
     val batchCompleted = payload.getLong("batchCompleted");
     log.info(
-        "Starting to update Sender Job for jobId: {}, batchToProcess{}, batchCompleted{}",
+        "Starting to update Sender Job for jobId: {}, batchToProcess {}, batchCompleted {}",
         jobId,
         batchToProcess,
         batchCompleted);
@@ -140,7 +140,7 @@ public class SenderStatsVerticle extends AbstractVerticle {
                                     senderJobs ->
                                         performSenderJobUpdate(
                                             client,
-                                            senderId,
+                                            jobId,
                                             senderJobs,
                                             batchToProcess,
                                             batchCompleted,
@@ -400,7 +400,7 @@ public class SenderStatsVerticle extends AbstractVerticle {
         .onFailure(DbResponse.errorHandler(message, "Unable to retrieve Sender Stats from Redis"))
         .onSuccess(
             resp -> {
-              val statsJson = JsonObject.mapFrom(resp.toString());
+              val statsJson = new JsonObject(resp.toString());
               val newTimedOutSends = statsJson.getInteger(TIMEDOUT_SENDS) + timedOutCount;
               statsJson.put(TIMEDOUT_SENDS, newTimedOutSends);
               statsJson.put(LAST_UPDATE_TIME, LocalDateTime.now().toString());
@@ -430,7 +430,7 @@ public class SenderStatsVerticle extends AbstractVerticle {
 
   private Future<String> performSenderJobUpdate(
       SqlConnection client,
-      String senderId,
+      String jobId,
       RowSet<SenderJob> senderJobs,
       Long batchToProcess,
       Long batchCompleted,
@@ -438,8 +438,8 @@ public class SenderStatsVerticle extends AbstractVerticle {
     return Future.future(
         promise -> {
           if (!senderJobs.iterator().hasNext()) {
-            log.warn("Sender Job for senderId" + senderId + " not available!");
-            promise.fail("Sender Job for senderId" + senderId + " not available!");
+            log.warn("Sender Job for jobId" + jobId + " not available!");
+            promise.fail("Sender Job for jobId" + jobId + " not available!");
           } else {
             val senderJob = senderJobs.iterator().next();
             val senderUpdated = senderJob.toBuilder().build();
