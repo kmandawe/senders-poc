@@ -21,11 +21,11 @@ public class MembersSummaryVerticle extends AbstractVerticle {
     vertx
         .eventBus()
         .<JsonObject>consumer(EB_MEMBERS_SUMMARY)
-        .handler(this::processMemberFunctionsCalculation);
+        .handler(this::processMemberSummaryCalculation);
     startPromise.complete();
   }
 
-  private void processMemberFunctionsCalculation(Message<JsonObject> message) {
+  private void processMemberSummaryCalculation(Message<JsonObject> message) {
     val payload = message.body();
     val senderId = payload.getString("senderId");
     val startTime = payload.getLong("startTime");
